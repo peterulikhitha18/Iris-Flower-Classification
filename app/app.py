@@ -4,17 +4,17 @@ import pandas as pd
 from pathlib import Path
 
 # ---------------------------------------------------
-# Project Paths
+# Paths
 # ---------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MODEL_PATH = BASE_DIR / "models" / "model.pkl"
 IMAGE_PATH = BASE_DIR / "images"
 
+# ---------------------------------------------------
 # Load Model
+# ---------------------------------------------------
 model = joblib.load(MODEL_PATH)
-
-species_names = ["Setosa", "Versicolor", "Virginica"]
 
 # ---------------------------------------------------
 # Page Configuration
@@ -25,33 +25,24 @@ st.set_page_config(
     layout="centered"
 )
 
-# ---------------------------------------------------
-# Title
-# ---------------------------------------------------
 st.title("🌸 Iris Flower Classification")
 
-st.markdown("""
-This application predicts the **species of an Iris flower**
-using a **Machine Learning K-Nearest Neighbors (KNN)** model.
-
-Enter the flower measurements below and click **Predict Species**.
+st.write("""
+Predict the species of an Iris flower using a trained
+K-Nearest Neighbors (KNN) Machine Learning model.
 """)
 
 st.divider()
 
-# ---------------------------------------------------
 # Sidebar
-# ---------------------------------------------------
-st.sidebar.header("About Project")
+st.sidebar.header("Project Information")
 
 st.sidebar.write("""
-### Algorithm
-- K-Nearest Neighbors (KNN)
+**Algorithm:** K-Nearest Neighbors (KNN)
 
-### Dataset
-- Iris Dataset
+**Dataset:** Iris Dataset
 
-### Features
+**Features:**
 - Sepal Length
 - Sepal Width
 - Petal Length
@@ -59,8 +50,9 @@ st.sidebar.write("""
 """)
 
 # ---------------------------------------------------
-# Input Fields
+# Inputs
 # ---------------------------------------------------
+
 sepal_length = st.number_input(
     "Sepal Length (cm)",
     min_value=0.0,
@@ -98,9 +90,10 @@ st.divider()
 # ---------------------------------------------------
 # Prediction
 # ---------------------------------------------------
+
 if st.button("Predict Species"):
 
-    input_data = pd.DataFrame(
+    input_df = pd.DataFrame(
         [[
             sepal_length,
             sepal_width,
@@ -115,42 +108,51 @@ if st.button("Predict Species"):
         ]
     )
 
-    prediction = model.predict(input_data)[0]
+    prediction = model.predict(input_df)[0]
+    probabilities = model.predict_proba(input_df)[0]
 
-    probabilities = model.predict_proba(input_data)[0]
+    # Debug output
+    st.write("Raw Prediction:", prediction)
+
+    # Convert prediction to species name
+    if prediction == 0 or str(prediction).lower() == "setosa":
+        species = "Setosa"
+        image = IMAGE_PATH / "setosa.jpg"
+
+    elif prediction == 1 or str(prediction).lower() == "versicolor":
+        species = "Versicolor"
+        image = IMAGE_PATH / "versicolor.jpg"
+
+    elif prediction == 2 or str(prediction).lower() == "virginica":
+        species = "Virginica"
+        image = IMAGE_PATH / "virginica.jpg"
+
+    else:
+        species = str(prediction)
+        image = None
 
     confidence = max(probabilities) * 100
 
-    st.success(f"🌼 Predicted Species: **{prediction}**")
+    st.success(f"Predicted Species: {species}")
+    st.info(f"Confidence: {confidence:.2f}%")
 
-    st.info(f"Confidence: **{confidence:.2f}%**")
-
-    st.subheader("Input Summary")
-
-    st.write(f"**Sepal Length:** {sepal_length} cm")
-    st.write(f"**Sepal Width:** {sepal_width} cm")
-    st.write(f"**Petal Length:** {petal_length} cm")
-    st.write(f"**Petal Width:** {petal_width} cm")
-
-    st.subheader("Prediction Probability")
+    st.subheader("Prediction Probabilities")
 
     probability_df = pd.DataFrame(
         [probabilities],
-        columns=species_names
+        columns=["Setosa", "Versicolor", "Virginica"]
     )
 
     st.bar_chart(probability_df)
 
-    st.subheader("Predicted Flower")
+    st.subheader("Flower Image")
 
-    if prediction == "Setosa":
-        st.image(IMAGE_PATH / "setosa.jpg", caption="Iris Setosa")
+    if image is not None:
+        st.image(image, width=350)
 
-    elif prediction == "Versicolor":
-        st.image(IMAGE_PATH / "versicolor.jpg", caption="Iris Versicolor")
+    st.subheader("Input Values")
 
-    else:
-        st.image(IMAGE_PATH / "virginica.jpg", caption="Iris Virginica")
+    st.write(input_df)
 
 st.divider()
 
